@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapi-service
+  namespace: homework
+spec:
+  type: ClusterIP
+  selector:
+    app: webapi-dep-pod
+  ports:
+    - name: webapi-port
+      protocol: TCP
+      port: 80
+      targetPort: pod-port

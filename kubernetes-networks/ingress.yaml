@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minimal-ingress
+  namespace: homework
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-redirect: / /
+spec:
+  rules:
+    - host: homework.otus
+      http:
+        paths:
+          - path: /index.html
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: webapi-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webapi-service
+                port:
+                  number: 80
