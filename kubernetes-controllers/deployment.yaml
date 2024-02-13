@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapi-dep
+  namespace: homework
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapi-dep
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      name: webapi-dep
+      labels:
+        app: webapi-dep
+    spec:
+      nodeSelector:
+        homework: "true"
+      containers:
+        - name: webapi
+          image: inmyminde/k8s
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "300m"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm", "/homework/index.html"]
+          ports:
+            - name: http-port
+              containerPort: 8000
+          volumeMounts:
+            - name: base-vol
+              mountPath: /homework
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "cat", "/homework/index.html"]
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      initContainers:
+        - name: index-html-downloader
+          image: busybox:1.28
+          volumeMounts:
+            - name: base-vol
+              mountPath: /init
+          command: ["/bin/sh", "-c"]
+          args:
+            - wget -O /init/index.html https://www.w3schools.com/html/default.asp
+      volumes:
+        - name: base-vol
+          emptyDir: {}
+
