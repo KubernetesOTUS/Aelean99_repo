@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapi-dep
+  namespace: homework
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webapi-dep-pod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: webapi-dep-pod
+    spec:
+      serviceAccountName: monitoring
+      automountServiceAccountToken: true
+      nodeSelector:
+        homework: "true"
+      containers:
+        - name: webapi
+          image: inmyminde/k8s:hw5
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm", "/homework/index.html"]
+          ports:
+            - name: pod-port
+              containerPort: 8000
+          volumeMounts:
+            - name: pv-storage
+              mountPath: /homework
+            - name: config-volume
+              mountPath: /homework/conf
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      initContainers:
+        - name: index-html-downloader
+          image: busybox:1.28
+          volumeMounts:
+            - name: pv-storage
+              mountPath: /init
+          command:
+            [
+              "/bin/sh",
+              "-c",
+              "wget -O /init/index.html https://www.w3schools.com/html/default.asp",
+              "&&",
+              "curl https://192.168.49.2:8443/metrics --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -o /init/metrics.html"
+            ]
+      volumes:
+        - name: pv-storage
+          persistentVolumeClaim:
+            claimName: pv-claim
+        - name: config-volume
+          configMap:
+            name: homework-config
+
